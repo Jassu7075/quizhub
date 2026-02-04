@@ -4,67 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, BookOpen, Award, Play, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { SectionHeader, StatsCard } from "@/components/shared";
+import { SUBJECTS } from "@/lib/constants";
 
 const QuizDashboard = () => {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-
-  const subjects = [
-    {
-      id: "cpp",
-      name: "C++",
-      icon: "⚡",
-      description: "Object-oriented programming concepts, STL, and algorithms",
-      quizzes: 12,
-      totalQuestions: 120,
-      difficulty: "Intermediate",
-      averageTime: "45 min",
-      color: "bg-blue-500"
-    },
-    {
-      id: "python",
-      name: "Python",
-      icon: "🐍",
-      description: "Python syntax, data structures, and built-in functions",
-      quizzes: 15,
-      totalQuestions: 150,
-      difficulty: "Beginner",
-      averageTime: "30 min",
-      color: "bg-green-500"
-    },
-    {
-      id: "java",
-      name: "Java",
-      icon: "☕",
-      description: "Core Java, OOP principles, and collections framework",
-      quizzes: 10,
-      totalQuestions: 100,
-      difficulty: "Intermediate",
-      averageTime: "40 min",
-      color: "bg-orange-500"
-    },
-    {
-      id: "html",
-      name: "HTML",
-      icon: "🌐",
-      description: "HTML5 elements, semantic markup, and web standards",
-      quizzes: 8,
-      totalQuestions: 80,
-      difficulty: "Beginner",
-      averageTime: "25 min",
-      color: "bg-red-500"
-    },
-    {
-      id: "aptitude",
-      name: "Aptitude",
-      icon: "🧠",
-      description: "Logical reasoning, quantitative aptitude, and problem solving",
-      quizzes: 20,
-      totalQuestions: 200,
-      difficulty: "Mixed",
-      averageTime: "60 min",
-      color: "bg-purple-500"
-    }
-  ];
 
   const recentQuizzes = [
     { name: "C++ Basics", score: 85, date: "2 days ago", subject: "C++" },
@@ -72,68 +16,34 @@ const QuizDashboard = () => {
     { name: "Java Collections", score: 78, date: "1 week ago", subject: "Java" },
   ];
 
+  const dashboardStats = [
+    { label: "Total Quizzes", value: "65", icon: BookOpen, colorClass: "accent" },
+    { label: "Questions", value: "650", icon: Clock, colorClass: "secondary" },
+    { label: "Avg Score", value: "85%", icon: Award, colorClass: "cta" },
+    { label: "Students", value: "1.2K", icon: Users, colorClass: "primary" },
+  ];
+
   return (
     <div className="min-h-screen py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Quiz Dashboard
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            Choose your subject and start testing your knowledge
-          </p>
-        </div>
+        <SectionHeader
+          title="Quiz Dashboard"
+          subtitle="Choose your subject and start testing your knowledge"
+          centered={false}
+        />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Quizzes</p>
-                  <p className="text-3xl font-bold text-accent">65</p>
-                </div>
-                <BookOpen className="h-8 w-8 text-accent" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Questions</p>
-                  <p className="text-3xl font-bold text-secondary">650</p>
-                </div>
-                <Clock className="h-8 w-8 text-secondary" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-cta/10 to-cta/5 border-cta/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Avg Score</p>
-                  <p className="text-3xl font-bold text-cta">85%</p>
-                </div>
-                <Award className="h-8 w-8 text-cta" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Students</p>
-                  <p className="text-3xl font-bold text-primary">1.2K</p>
-                </div>
-                <Users className="h-8 w-8 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
+          {dashboardStats.map((stat) => (
+            <StatsCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              icon={stat.icon}
+              colorClass={stat.colorClass}
+            />
+          ))}
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -141,7 +51,7 @@ const QuizDashboard = () => {
           <div className="lg:col-span-2">
             <h2 className="text-2xl font-bold mb-6 text-foreground">Available Subjects</h2>
             <div className="grid md:grid-cols-2 gap-6">
-              {subjects.map((subject) => (
+              {SUBJECTS.map((subject) => (
                 <Card 
                   key={subject.id} 
                   className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${
@@ -192,9 +102,8 @@ const QuizDashboard = () => {
             </div>
           </div>
 
-          {/* Recent Activity */}
-          <div>
-            <h2 className="text-2xl font-bold mb-6 text-foreground">Recent Activity</h2>
+          {/* Recent Activity Sidebar */}
+          <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Latest Quiz Results</CardTitle>
@@ -226,7 +135,7 @@ const QuizDashboard = () => {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="mt-6">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Quick Actions</CardTitle>
               </CardHeader>

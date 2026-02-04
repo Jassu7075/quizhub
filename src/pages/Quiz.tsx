@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,14 +6,10 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Clock, CheckCircle, XCircle, ArrowRight, ArrowLeft, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { SUBJECT_INFO } from "@/lib/constants";
+import { getQuestionsBySubject, type Question } from "@/lib/questions";
 
-interface Question {
-  id: number;
-  question: string;
-  options: string[];
-  correct: number;
-  explanation: string;
-}
+const QUIZ_DURATION = 600; // 10 minutes in seconds
 
 const Quiz = () => {
   const { subject } = useParams();
@@ -23,59 +19,42 @@ const Quiz = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answers, setAnswers] = useState<number[]>([]);
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+  const [timeLeft, setTimeLeft] = useState(QUIZ_DURATION);
   const [quizStarted, setQuizStarted] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [score, setScore] = useState(0);
 
-  // Sample questions for C++
-  const questions: Question[] = [
-    {
-      id: 1,
-      question: "Which of the following is the correct syntax for declaring a variable in C++?",
-      options: ["int x;", "variable int x;", "declare int x;", "x: int;"],
-      correct: 0,
-      explanation: "In C++, variables are declared using the syntax: data_type variable_name;"
-    },
-    {
-      id: 2,
-      question: "What is the output of the following code?\n\n```cpp\ncout << 5 + 3 * 2;\n```",
-      options: ["16", "11", "10", "13"],
-      correct: 1,
-      explanation: "Due to operator precedence, multiplication is performed before addition: 3 * 2 = 6, then 5 + 6 = 11"
-    },
-    {
-      id: 3,
-      question: "Which header file is required for input/output operations in C++?",
-      options: ["<stdio.h>", "<iostream>", "<conio.h>", "<input.h>"],
-      correct: 1,
-      explanation: "<iostream> is the standard header file for input/output operations in C++"
-    },
-    {
-      id: 4,
-      question: "What is the correct way to create a pointer in C++?",
-      options: ["int ptr;", "int *ptr;", "pointer int ptr;", "int &ptr;"],
-      correct: 1,
-      explanation: "In C++, pointers are declared using the asterisk (*) symbol: data_type *pointer_name;"
-    },
-    {
-      id: 5,
-      question: "Which of the following is used to terminate a C++ statement?",
-      options: [":", ".", ";", ","],
-      correct: 2,
-      explanation: "In C++, statements are terminated with a semicolon (;)"
+  const questions = getQuestionsBySubject(subject || "cpp");
+  const currentSubject = SUBJECT_INFO[subject as keyof typeof SUBJECT_INFO] || SUBJECT_INFO.cpp;
+
+  const formatTime = useCallback((seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }, []);
+
+  const handleQuizComplete = useCallback(() => {
+    const finalAnswers = [...answers];
+    if (selectedAnswer !== null) {
+      finalAnswers[currentQuestion] = selectedAnswer;
     }
-  ];
-
-  const subjectInfo = {
-    cpp: { name: "C++", icon: "⚡", color: "text-blue-500" },
-    python: { name: "Python", icon: "🐍", color: "text-green-500" },
-    java: { name: "Java", icon: "☕", color: "text-orange-500" },
-    html: { name: "HTML", icon: "🌐", color: "text-red-500" },
-    aptitude: { name: "Aptitude", icon: "🧠", color: "text-purple-500" }
-  };
-
-  const currentSubject = subjectInfo[subject as keyof typeof subjectInfo] || subjectInfo.cpp;
+    
+    let correctCount = 0;
+    finalAnswers.forEach((answer, index) => {
+      if (answer === questions[index]?.correct) {
+        correctCount++;
+      }
+    });
+    
+    setScore(correctCount);
+    setQuizCompleted(true);
+    setAnswers(finalAnswers);
+    
+    toast({
+      title: "Quiz Completed!",
+      description: `You scored ${correctCount}/${questions.length} (${Math.round((correctCount / questions.length) * 100)}%)`,
+    });
+  }, [answers, selectedAnswer, currentQuestion, questions, toast]);
 
   // Timer effect
   useEffect(() => {
@@ -85,20 +64,14 @@ const Quiz = () => {
     } else if (timeLeft === 0 && !quizCompleted) {
       handleQuizComplete();
     }
-  }, [timeLeft, quizStarted, quizCompleted]);
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  }, [timeLeft, quizStarted, quizCompleted, handleQuizComplete]);
 
   const startQuiz = () => {
     setQuizStarted(true);
-    setTimeLeft(600);
+    setTimeLeft(QUIZ_DURATION);
     toast({
       title: "Quiz Started!",
-      description: "Good luck with your quiz. You have 10 minutes to complete it.",
+      description: "Good luck! You have 10 minutes to complete it.",
     });
   };
 
@@ -128,39 +101,17 @@ const Quiz = () => {
     }
   };
 
-  const handleQuizComplete = () => {
-    const finalAnswers = [...answers];
-    if (selectedAnswer !== null) {
-      finalAnswers[currentQuestion] = selectedAnswer;
-    }
-    
-    let correctCount = 0;
-    finalAnswers.forEach((answer, index) => {
-      if (answer === questions[index]?.correct) {
-        correctCount++;
-      }
-    });
-    
-    setScore(correctCount);
-    setQuizCompleted(true);
-    setAnswers(finalAnswers);
-    
-    toast({
-      title: "Quiz Completed!",
-      description: `You scored ${correctCount}/${questions.length} (${Math.round((correctCount / questions.length) * 100)}%)`,
-    });
-  };
-
   const restartQuiz = () => {
     setCurrentQuestion(0);
     setSelectedAnswer(null);
     setAnswers([]);
-    setTimeLeft(600);
+    setTimeLeft(QUIZ_DURATION);
     setQuizStarted(false);
     setQuizCompleted(false);
     setScore(0);
   };
 
+  // Start Screen
   if (!quizStarted) {
     return (
       <div className="min-h-screen flex items-center justify-center py-12 px-4">
@@ -196,11 +147,7 @@ const Quiz = () => {
               Start Quiz
             </Button>
             
-            <Button 
-              onClick={() => navigate('/quiz')} 
-              variant="outline" 
-              className="w-full"
-            >
+            <Button onClick={() => navigate('/quiz')} variant="outline" className="w-full">
               Back to Dashboard
             </Button>
           </CardContent>
@@ -209,6 +156,7 @@ const Quiz = () => {
     );
   }
 
+  // Results Screen
   if (quizCompleted) {
     const percentage = Math.round((score / questions.length) * 100);
     const passed = percentage >= 60;
@@ -218,17 +166,12 @@ const Quiz = () => {
         <div className="max-w-4xl mx-auto">
           <Card className="shadow-xl border-0 bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <div className="text-6xl mb-4">
-                {passed ? "🎉" : "📚"}
-              </div>
+              <div className="text-6xl mb-4">{passed ? "🎉" : "📚"}</div>
               <CardTitle className="text-3xl mb-2">
                 {passed ? "Congratulations!" : "Keep Learning!"}
               </CardTitle>
               <p className="text-muted-foreground">
-                {passed 
-                  ? "You've successfully completed the quiz!"
-                  : "Don't worry, practice makes perfect!"
-                }
+                {passed ? "You've successfully completed the quiz!" : "Don't worry, practice makes perfect!"}
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -243,7 +186,7 @@ const Quiz = () => {
                   <div className="text-sm text-muted-foreground">Your Score</div>
                 </div>
                 <div className="p-6 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5">
-                  <div className="text-3xl font-bold text-primary mb-2">{formatTime(600 - timeLeft)}</div>
+                  <div className="text-3xl font-bold text-primary mb-2">{formatTime(QUIZ_DURATION - timeLeft)}</div>
                   <div className="text-sm text-muted-foreground">Time Taken</div>
                 </div>
               </div>
@@ -251,41 +194,14 @@ const Quiz = () => {
               {/* Review Answers */}
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold">Review Your Answers</h3>
-                {questions.map((question, index) => {
-                  const userAnswer = answers[index];
-                  const isCorrect = userAnswer === question.correct;
-                  
-                  return (
-                    <Card key={index} className={`border-l-4 ${isCorrect ? 'border-l-accent' : 'border-l-destructive'}`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-medium text-sm">Question {index + 1}</h4>
-                          {isCorrect ? (
-                            <CheckCircle className="w-5 h-5 text-accent" />
-                          ) : (
-                            <XCircle className="w-5 h-5 text-destructive" />
-                          )}
-                        </div>
-                        <p className="text-sm mb-3">{question.question}</p>
-                        <div className="space-y-1 text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground">Your answer:</span>
-                            <span className={isCorrect ? 'text-accent' : 'text-destructive'}>
-                              {userAnswer !== undefined ? question.options[userAnswer] : 'Not answered'}
-                            </span>
-                          </div>
-                          {!isCorrect && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-muted-foreground">Correct answer:</span>
-                              <span className="text-accent">{question.options[question.correct]}</span>
-                            </div>
-                          )}
-                          <p className="text-muted-foreground italic mt-2">{question.explanation}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                {questions.map((question, index) => (
+                  <ReviewCard 
+                    key={index}
+                    question={question}
+                    index={index}
+                    userAnswer={answers[index]}
+                  />
+                ))}
               </div>
 
               {/* Actions */}
@@ -308,6 +224,7 @@ const Quiz = () => {
     );
   }
 
+  // Quiz Screen
   const currentQ = questions[currentQuestion];
   const progress = ((currentQuestion + 1) / questions.length) * 100;
 
@@ -324,12 +241,10 @@ const Quiz = () => {
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <Badge variant="outline" className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              {formatTime(timeLeft)}
-            </Badge>
-          </div>
+          <Badge variant="outline" className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            {formatTime(timeLeft)}
+          </Badge>
         </div>
 
         {/* Progress */}
@@ -344,7 +259,7 @@ const Quiz = () => {
         {/* Question */}
         <Card className="mb-6 shadow-lg border-0 bg-card/80 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-xl">
+            <CardTitle className="text-xl whitespace-pre-line">
               {currentQ.question}
             </CardTitle>
           </CardHeader>
@@ -391,6 +306,48 @@ const Quiz = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+// Extracted ReviewCard component
+interface ReviewCardProps {
+  question: Question;
+  index: number;
+  userAnswer: number | undefined;
+}
+
+const ReviewCard = ({ question, index, userAnswer }: ReviewCardProps) => {
+  const isCorrect = userAnswer === question.correct;
+  
+  return (
+    <Card className={`border-l-4 ${isCorrect ? 'border-l-accent' : 'border-l-destructive'}`}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between mb-2">
+          <h4 className="font-medium text-sm">Question {index + 1}</h4>
+          {isCorrect ? (
+            <CheckCircle className="w-5 h-5 text-accent" />
+          ) : (
+            <XCircle className="w-5 h-5 text-destructive" />
+          )}
+        </div>
+        <p className="text-sm mb-3 whitespace-pre-line">{question.question}</p>
+        <div className="space-y-1 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">Your answer:</span>
+            <span className={isCorrect ? 'text-accent' : 'text-destructive'}>
+              {userAnswer !== undefined ? question.options[userAnswer] : 'Not answered'}
+            </span>
+          </div>
+          {!isCorrect && (
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Correct answer:</span>
+              <span className="text-accent">{question.options[question.correct]}</span>
+            </div>
+          )}
+          <p className="text-muted-foreground italic mt-2">{question.explanation}</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
